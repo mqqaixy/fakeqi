@@ -12,17 +12,25 @@ jobs:
       - name: 2. 安装环境
         run: |
           git clone --recursive https://github.com/theos/theos.git ~/theos
-          mkdir -p ~/theos/sdks
           curl -L https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
           tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      - name: 3. 检查文件位置
-        run: |
-          ls -R
-          echo "THEOS 变量是: $THEOS"
-
-      - name: 4. 强制编译
+      - name: 3. 寻找文件并开始打包
         run: |
           export THEOS=$HOME/theos
+          # 这一行会自动寻找 Makefile 在哪，并进入那个文件夹
+          FILE_PATH=$(find . -name "Makefile" -print -quit)
+          if [ -z "$FILE_PATH" ]; then echo "错误：仓库里根本没找到 Makefile！"; exit 1; fi
+          cd "$(dirname "$FILE_PATH")"
+          
+          # 执行编译
           make package FINALPACKAGE=1
+          
+      - name: 4. 导出成品
+        uses: actions/upload-artifact@v4
+        with:
+          name: FakeLocation-Dylib
+          path: |
+            **/packages/*.deb
+            **/.theos/obj/debug/*.dylib
