@@ -1,31 +1,27 @@
-name: Simple-Build
+name: Build Tweak
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: 1. 签出代码
+      - name: 1. 下载代码
         uses: actions/checkout@v4
 
-      - name: 2. 暴力寻找并改名
-        run: |
-          # 无论你的文件叫 tweak.x 还是 Tweak.X，统统强转为标准的 Tweak.x
-          T_PATH=$(find . -name "*weak.[xX]" -print -quit)
-          if [ -z "$T_PATH" ]; then echo "仓库里找不到 Tweak.x"; exit 1; fi
-          cp "$T_PATH" ./Tweak.x
-          echo "找到代码文件: $T_PATH"
+      - name: 2. 安装 Theos 环境
+        uses: theos/setup-theos@v1
 
-      - name: 3. 使用系统自带工具编译 (无需下载)
+      - name: 3. 寻找并编译
         run: |
-          # 直接调用 macOS 自带的苹果开发工具，跳过所有网络下载
-          xcrun -sdk iphoneos clang -dynamiclib -arch arm64 -arch arm64e \
-          -miphoneos-version-min=14.0 \
-          -framework UIKit -framework CoreLocation \
-          -o FakeLocationPro.dylib Tweak.x \
-          -isysroot $(xcrun --sdk iphoneos --show-sdk-path)
+          # 自动寻找 Makefile 并编译
+          MAKE_DIR=$(dirname $(find . -name "Makefile" | head -n 1))
+          cd "$MAKE_DIR"
+          make package FINALPACKAGE=1
 
       - name: 4. 导出成品
         uses: actions/upload-artifact@v4
         with:
-          name: FakeLocation-Dylib
-          path: "*.dylib"
+          name: Tweak-Packages
+          path: |
+            **/*.deb
+            **/*.dylib
