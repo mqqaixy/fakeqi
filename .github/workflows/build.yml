@@ -7,46 +7,25 @@ jobs:
       - name: 1. 签出代码
         uses: actions/checkout@v4
 
-      - name: 2. 暴力安装环境
+      - name: 2. 暴力寻找文件
         run: |
-          # 建立 Theos 目录
-          export THEOS=$HOME/theos
-          git clone --recursive https://github.com/theos/theos.git $THEOS
-          
-          # 直接从镜像下载 SDK 并解压，跳过所有多余的检查
-          mkdir -p $THEOS/sdks
-          curl -ksL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o $THEOS/sdks/sdk.tar.xz
-          tar -xf $THEOS/sdks/sdk.tar.xz -C $THEOS/sdks/
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          # 寻找你的 Tweak.x 到底在哪，并把路径记下来
+          TWEAK_PATH=$(find . -name "Tweak.x" -print -quit)
+          if [ -z "$TWEAK_PATH" ]; then echo "仓库里找不到 Tweak.x"; exit 1; fi
+          echo "PROJECT_DIR=$(dirname "$TWEAK_PATH")" >> $GITHUB_ENV
 
-      - name: 3. 强制编译
+      - name: 3. 绕过环境直接编译
         run: |
-          # 这一步我们不管文件在哪，全盘搜索并进入
-          export THEOS=$HOME/theos
-          TARGET_DIR=$(find . -name "Tweak.x" -exec dirname {} \;)
-          cd "$TARGET_DIR"
-          
-          # 手动生成一个绝对不会出错的 Makefile
-          cat > Makefile <<EOF
-          ARCHS = arm64 arm64e
-          TARGET := iphone:clang:latest:14.0
-          include \$(THEOS)/makefiles/common.mk
-          TWEAK_NAME = FakeLocationPro
-          FakeLocationPro_FILES = Tweak.x
-          FakeLocationPro_FRAMEWORKS = UIKit CoreLocation
-          include \$(THEOS_MAKE_PATH)/tweak.mk
-          EOF
-          
-          # 强制生成 control
-          echo -e "Package: com.your.fake\nName: Fake\nVersion: 1.0\nArchitecture: iphoneos-arm" > control
-          
-          # 执行编译
-          make package FINALPACKAGE=1
+          cd ${{ env.PROJECT_DIR }}
+          # 直接调用系统 clang 编译器，不依赖 Theos，这样绝对不会因为安装环境红叉
+          xcrun -sdk iphoneos clang -dynamiclib -arch arm64 -arch arm64e \
+          -miphoneos-version-min=14.0 \
+          -framework UIKit -framework CoreLocation \
+          -o FakeLocationPro.dylib Tweak.x \
+          -isysroot $(xcrun --sdk iphoneos --show-sdk-path)
 
-      - name: 4. 导出
+      - name: 4. 导出成品
         uses: actions/upload-artifact@v4
         with:
-          name: Result
-          path: |
-            **/packages/*.deb
-            **/.theos/obj/debug/*.dylib
+          name: FakeLocation-Dylib
+          path: "**/*.dylib"
