@@ -4,17 +4,24 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Theos
-        uses: theos/setup-theos@v1
-        
+        run: |
+          # 1. 强力克隆 Theos 框架
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          # 2. 强力下载 iOS SDK
+          git clone https://github.com/theos/sdks.git ~/theos/sdks
+          # 3. 设置全局路径
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
       - name: Build Package
         run: |
-          make package FINALPACKAGE=1
+          # 4. 执行编译
+          make package FINALPACKAGE=1 THEOS=$HOME/theos
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
