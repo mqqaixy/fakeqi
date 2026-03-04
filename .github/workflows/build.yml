@@ -11,15 +11,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Theos
-        run: |
-          export THEOS=/Users/runner/theos
-          git clone --recursive https://github.com/theos/theos.git $THEOS
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip master.zip
-          mv sdks-master/*.sdk $THEOS/sdks
-          rm -rf sdks-master master.zip
-          echo "THEOS=$THEOS" >> $GITHUB_ENV
+      - name: Setup Theos
+        uses: theos/setup-theos@v1
 
       - name: Build Package
         run: |
