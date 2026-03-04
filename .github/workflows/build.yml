@@ -16,22 +16,15 @@ jobs:
           tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      - name: 3. 编译（全路径定位）
+      - name: 3. 编译
         run: |
           export THEOS=$HOME/theos
-          # 这一步非常关键：我们在全盘找 Makefile 到底在哪
-          export M_PATH=$(find . -name "Makefile" -maxdepth 3)
-          export M_DIR=$(dirname "$M_PATH")
-          echo "发现项目在目录: $M_DIR"
+          make package FINALPACKAGE=1
           
-          # 强制进入那个目录并编译
-          cd "$M_DIR"
-          make FINALPACKAGE=1
-          
-      - name: 4. 导出成品
+      - name: 4. 导出
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-Dylib
           path: |
-            **/obj/*.dylib
-            **/.theos/obj/*.dylib
+            packages/*.deb
+            .theos/obj/debug/*.dylib
