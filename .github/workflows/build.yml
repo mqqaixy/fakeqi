@@ -9,24 +9,40 @@ jobs:
       - name: 1. 下载代码
         uses: actions/checkout@v4
 
-      - name: 2. 手动搭环境 (最稳方案)
+      - name: 2. 暴力搭建环境
         run: |
           git clone --recursive https://github.com/theos/theos.git ~/theos
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          # 下载一个小型的 SDK
           curl -ksL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
           tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      - name: 3. 强制搜寻并打包
+      - name: 3. 强制重写并编译
         run: |
           export THEOS=$HOME/theos
-          # 自动寻找文件夹位置
-          MAKE_PATH=$(find . -name "Makefile" -print -quit)
-          cd "$(dirname "$MAKE_PATH")"
-          # 运行编译
+          # 找到你文件所在的真实目录
+          REAL_PATH=$(find . -name "Tweak.x" -print -quit)
+          cd "$(dirname "$REAL_PATH")"
+          
+          # 强制覆盖 Makefile 确保格式 100% 正确
+          cat > Makefile <<EOF
+          ARCHS = arm64 arm64e
+          TARGET := iphone:clang:14.5:14.0
+          include \$(THEOS)/makefiles/common.mk
+          TWEAK_NAME = FakeLocationPro
+          FakeLocationPro_FILES = Tweak.x
+          FakeLocationPro_FRAMEWORKS = UIKit CoreLocation
+          include \$(THEOS_MAKE_PATH)/tweak.mk
+          EOF
+          
+          # 强制补充 control 文件
+          if [ ! -f "control" ]; then
+            echo -e "Package: com.test.fake\nName: Fake\nVersion: 1.0\nArchitecture: iphoneos-arm" > control
+          fi
+          
+          # 开始打包
           make package FINALPACKAGE=1
 
-      - name: 4. 导出
+      - name: 4. 导出成品
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-Dylib
