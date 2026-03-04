@@ -11,12 +11,19 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Theos
-        uses: theos/setup-theos@v1
+      - name: Install Theos and SDK
+        run: |
+          # 手动克隆 Theos 框架
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          # 下载必要的 iOS SDK (这样它就不会报错说找不到头文件了)
+          git clone https://github.com/theos/sdks.git ~/theos/sdks
+          # 把 Theos 路径告诉系统
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
       - name: Build Package
         run: |
-          make package FINALPACKAGE=1
+          # 开始正式编译
+          make package FINALPACKAGE=1 THEOS=$HOME/theos
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
