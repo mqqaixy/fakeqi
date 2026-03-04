@@ -1,22 +1,52 @@
-name: Build
-on: [push, workflow_dispatch]
+name: Build Dylib
+
+on: [push, pull_request, workflow_dispatch]
+
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Theos
+      - name: 1. 下载代码
+        uses: actions/checkout@v4
+
+      - name: 2. 安装环境
         uses: theos/setup-theos@v1
         with:
           sdk-version: '14.5'
-      - name: Build
+
+      - name: 3. 强制对齐并编译
         run: |
-          # 强制跳过签名和复杂检查
+          # 这一步直接在当前目录强制生成标准的 Makefile
+          cat > Makefile <<EOF
+          ARCHS = arm64 arm64e
+          TARGET := iphone:clang:latest:14.0
+          include \$(THEOS)/makefiles/common.mk
+          TWEAK_NAME = FakeLocationPro
+          FakeLocationPro_FILES = Tweak.x
+          FakeLocationPro_FRAMEWORKS = UIKit CoreLocation
+          include \$(THEOS_MAKE_PATH)/tweak.mk
+          EOF
+
+          # 强制生成标准的 control
+          cat > control <<EOF
+          Package: com.yourname.fakeloc
+          Name: FakeLocationPro
+          Depends: mobilesubstrate
+          Version: 1.0.0
+          Architecture: iphoneos-arm
+          Description: Tweak
+          Maintainer: Dev
+          Author: Dev
+          Section: Tweaks
+          EOF
+
+          # 开始编译
           make package FINALPACKAGE=1
-      - name: Upload
+
+      - name: 4. 导出
         uses: actions/upload-artifact@v4
         with:
-          name: Tweak-Files
+          name: FakeLocation-Dylib
           path: |
             packages/*.deb
             .theos/obj/debug/*.dylib
