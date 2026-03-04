@@ -1,4 +1,4 @@
-name: Build
+name: Simple-Build
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -7,17 +7,17 @@ jobs:
       - name: 1. 签出代码
         uses: actions/checkout@v4
 
-      - name: 2. 暴力寻找文件
+      - name: 2. 暴力寻找并改名
         run: |
-          # 寻找你的 Tweak.x 到底在哪，并把路径记下来
-          TWEAK_PATH=$(find . -name "Tweak.x" -print -quit)
-          if [ -z "$TWEAK_PATH" ]; then echo "仓库里找不到 Tweak.x"; exit 1; fi
-          echo "PROJECT_DIR=$(dirname "$TWEAK_PATH")" >> $GITHUB_ENV
+          # 无论你的文件叫 tweak.x 还是 Tweak.X，统统强转为标准的 Tweak.x
+          T_PATH=$(find . -name "*weak.[xX]" -print -quit)
+          if [ -z "$T_PATH" ]; then echo "仓库里找不到 Tweak.x"; exit 1; fi
+          cp "$T_PATH" ./Tweak.x
+          echo "找到代码文件: $T_PATH"
 
-      - name: 3. 绕过环境直接编译
+      - name: 3. 使用系统自带工具编译 (无需下载)
         run: |
-          cd ${{ env.PROJECT_DIR }}
-          # 直接调用系统 clang 编译器，不依赖 Theos，这样绝对不会因为安装环境红叉
+          # 直接调用 macOS 自带的苹果开发工具，跳过所有网络下载
           xcrun -sdk iphoneos clang -dynamiclib -arch arm64 -arch arm64e \
           -miphoneos-version-min=14.0 \
           -framework UIKit -framework CoreLocation \
@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-Dylib
-          path: "**/*.dylib"
+          path: "*.dylib"
