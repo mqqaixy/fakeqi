@@ -17,16 +17,21 @@ jobs:
           tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      - name: 3. 强制编译
+      - name: 3. 强制搜寻并打包
         run: |
           export THEOS=$HOME/theos
-          # 这一行是用来检查文件到底在不在的，非常关键
-          ls -R
-          # 直接对着当前目录开火
+          # 自动寻找 Makefile 所在的文件夹并进入
+          MAKEFILE_PATH=$(find . -name "Makefile" -print -quit)
+          DIR_PATH=$(dirname "$MAKEFILE_PATH")
+          cd "$DIR_PATH"
+          echo "当前工作目录已切换到: $(pwd)"
+          ls -F
           make FINALPACKAGE=1
-          
+
       - name: 4. 导出成品文件
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-Dylib
-          path: .theos/obj/**/*.dylib
+          path: |
+            **/obj/**/*.dylib
+            **/.theos/obj/**/*.dylib
