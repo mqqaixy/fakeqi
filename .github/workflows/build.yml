@@ -9,25 +9,23 @@ jobs:
       - name: 1. 下载代码
         uses: actions/checkout@v4
 
-      - name: 2. 一键搭建 Theos 环境
-        # 使用官方推荐的 Setup Action，它自带缓存，不容易断连
-        uses: theos/setup-theos@v1
-        with:
-          sdk-version: '14.5'
-
-      - name: 3. 寻找并打包
+      - name: 2. 手动搭环境 (最稳方案)
         run: |
-          # 自动寻找 Makefile 所在的文件夹并进入
-          MAKEFILE_PATH=$(find . -name "Makefile" -print -quit)
-          if [ -z "$MAKEFILE_PATH" ]; then
-            echo "错误：没找到 Makefile"
-            exit 1
-          fi
-          cd "$(dirname "$MAKEFILE_PATH")"
-          
-          # 直接开始打包
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          # 下载一个小型的 SDK
+          curl -ksL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
+          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
+
+      - name: 3. 强制搜寻并打包
+        run: |
+          export THEOS=$HOME/theos
+          # 自动寻找文件夹位置
+          MAKE_PATH=$(find . -name "Makefile" -print -quit)
+          cd "$(dirname "$MAKE_PATH")"
+          # 运行编译
           make package FINALPACKAGE=1
-          
+
       - name: 4. 导出
         uses: actions/upload-artifact@v4
         with:
