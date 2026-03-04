@@ -12,7 +12,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Theos
-        uses: theos/setup-theos@master
+        uses: theos/setup-theos@v1.3.1
 
       - name: Build Package
         run: |
