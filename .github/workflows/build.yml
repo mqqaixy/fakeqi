@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:  # 允许手动触发测试
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,11 +21,10 @@ jobs:
           theos-dir: theos
           theos-src: https://github.com/theos/theos
           theos-sdks: https://github.com/theos/sdks
-          theos-sdks-branch: master
-          sdk-version: 18.0          # 改成你的 iOS 版本主号！如 iOS 17.x 用 17.0，iOS 18.x 用 18.0
-          orion: false               # 没用 Swift 就 false
+          theos-sdks-branch: master          # 这里控制 SDK 版本！如果 master 不行，改成 iPhoneOS18.0 或你需要的 branch 名
+          orion: false
 
-      - name: Cache Theos & SDKs (加速下次构建)
+      - name: Cache Theos & SDKs
         uses: actions/cache@v4
         with:
           path: |
@@ -33,7 +32,7 @@ jobs:
             .theos
           key: ${{ runner.os }}-theos-${{ hashFiles('Makefile', 'control', 'Tweak.x*') }}
 
-      - name: Build & Package (rootless mode)
+      - name: Build & Package (rootless)
         run: |
           make clean
           make package FINALPACKAGE=1
@@ -42,7 +41,7 @@ jobs:
           THEOS: ${{ github.workspace }}/theos
           ARCHS: arm64 arm64e
 
-      - name: Upload build artifacts (.deb & .dylib)
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-build
