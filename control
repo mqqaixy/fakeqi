@@ -1,4 +1,4 @@
-Package: com.yourname.fakelocation
+Package: com.yourname.fakeloc
 Name: FakeLocationPro
 Depends: mobilesubstrate
 Version: 1.0.0
