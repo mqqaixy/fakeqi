@@ -4,24 +4,30 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Theos
+      - name: Setup Theos & SDK
         run: |
-          # 1. 强力克隆 Theos 框架
+          # 1. 下载 Theos 核心
           git clone --recursive https://github.com/theos/theos.git ~/theos
-          # 2. 强力下载 iOS SDK
-          git clone https://github.com/theos/sdks.git ~/theos/sdks
-          # 3. 设置全局路径
+          
+          # 2. 下载最轻量的 iOS SDK (这一步最重要，解决了头文件丢失问题)
+          mkdir -p ~/theos/sdks
+          curl -L https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
+          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
+          rm ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
+          
+          # 3. 设置环境变量
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
       - name: Build Package
         run: |
-          # 4. 执行编译
-          make package FINALPACKAGE=1 THEOS=$HOME/theos
+          # 4. 强制指定 SDK 编译
+          export THEOS=$HOME/theos
+          make package FINALPACKAGE=1
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
