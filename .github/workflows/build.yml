@@ -4,26 +4,17 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Install Theos and SDK
-        run: |
-          # 手动克隆 Theos 框架
-          git clone --recursive https://github.com/theos/theos.git ~/theos
-          # 下载必要的 iOS SDK (这样它就不会报错说找不到头文件了)
-          git clone https://github.com/theos/sdks.git ~/theos/sdks
-          # 把 Theos 路径告诉系统
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-
+      - name: Setup Theos
+        uses: msy1727/setup-theos@master
+        
       - name: Build Package
         run: |
-          # 开始正式编译
-          make package FINALPACKAGE=1 THEOS=$HOME/theos
+          make package FINALPACKAGE=1
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
