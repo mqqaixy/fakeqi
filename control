@@ -1,0 +1,9 @@
+Package: com.yourname.fakeloc
+Name: FakeLocationPro
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: 虚拟定位插件，双指长按唤出
+Maintainer: YourName
+Author: YourName
+Section: Tweaks
