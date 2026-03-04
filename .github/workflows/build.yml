@@ -1,27 +1,52 @@
 name: Build Tweak
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # 允许手动触发测试
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+
     steps:
-      - name: 1. 下载代码
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 2. 安装 Theos 环境
-        uses: theos/setup-theos@v1
+      - name: Setup Theos
+        uses: Randomblock1/theos-action@v1
+        with:
+          theos-dir: theos
+          theos-src: https://github.com/theos/theos
+          theos-sdks: https://github.com/theos/sdks
+          theos-sdks-branch: master
+          sdk-version: 18.0          # 改成你的 iOS 版本主号！如 iOS 17.x 用 17.0，iOS 18.x 用 18.0
+          orion: false               # 没用 Swift 就 false
 
-      - name: 3. 寻找并编译
+      - name: Cache Theos & SDKs (加速下次构建)
+        uses: actions/cache@v4
+        with:
+          path: |
+            theos
+            .theos
+          key: ${{ runner.os }}-theos-${{ hashFiles('Makefile', 'control', 'Tweak.x*') }}
+
+      - name: Build & Package (rootless mode)
         run: |
-          # 自动寻找 Makefile 并编译
-          MAKE_DIR=$(dirname $(find . -name "Makefile" | head -n 1))
-          cd "$MAKE_DIR"
+          make clean
           make package FINALPACKAGE=1
+        env:
+          THEOS_PACKAGE_SCHEME: rootless
+          THEOS: ${{ github.workspace }}/theos
+          ARCHS: arm64 arm64e
 
-      - name: 4. 导出成品
+      - name: Upload build artifacts (.deb & .dylib)
         uses: actions/upload-artifact@v4
         with:
-          name: Tweak-Packages
+          name: FakeLocation-build
           path: |
-            **/*.deb
-            **/*.dylib
+            packages/*.deb
+            .theos/obj/*.dylib
+          if-no-files-found: warn
