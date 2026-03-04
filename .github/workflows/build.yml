@@ -1,51 +1,22 @@
-name: Build Dylib
-
-on: [push, pull_request, workflow_dispatch]
-
+name: Build
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: 1. 下载代码
-        uses: actions/checkout@v4
-
-      - name: 2. 暴力搭建环境
+      - uses: actions/checkout@v4
+      - name: Setup Theos
+        uses: theos/setup-theos@v1
+        with:
+          sdk-version: '14.5'
+      - name: Build
         run: |
-          git clone --recursive https://github.com/theos/theos.git ~/theos
-          curl -ksL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
-          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-
-      - name: 3. 强制重写并编译
-        run: |
-          export THEOS=$HOME/theos
-          # 找到你文件所在的真实目录
-          REAL_PATH=$(find . -name "Tweak.x" -print -quit)
-          cd "$(dirname "$REAL_PATH")"
-          
-          # 强制覆盖 Makefile 确保格式 100% 正确
-          cat > Makefile <<EOF
-          ARCHS = arm64 arm64e
-          TARGET := iphone:clang:14.5:14.0
-          include \$(THEOS)/makefiles/common.mk
-          TWEAK_NAME = FakeLocationPro
-          FakeLocationPro_FILES = Tweak.x
-          FakeLocationPro_FRAMEWORKS = UIKit CoreLocation
-          include \$(THEOS_MAKE_PATH)/tweak.mk
-          EOF
-          
-          # 强制补充 control 文件
-          if [ ! -f "control" ]; then
-            echo -e "Package: com.test.fake\nName: Fake\nVersion: 1.0\nArchitecture: iphoneos-arm" > control
-          fi
-          
-          # 开始打包
+          # 强制跳过签名和复杂检查
           make package FINALPACKAGE=1
-
-      - name: 4. 导出成品
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: FakeLocation-Dylib
+          name: Tweak-Files
           path: |
-            **/packages/*.deb
-            **/.theos/obj/debug/*.dylib
+            packages/*.deb
+            .theos/obj/debug/*.dylib
