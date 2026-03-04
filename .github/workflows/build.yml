@@ -6,19 +6,22 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: 1. 下载代码
         uses: actions/checkout@v4
 
-      - name: Setup Theos
-        uses: theos/setup-theos@v1
-        with:
-          sdk-version: '14.5'
-
-      - name: Build Package
+      - name: 2. 安装编译环境
         run: |
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          curl -L https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
+          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
+      - name: 3. 开始打包
+        run: |
+          export THEOS=$HOME/theos
           make package FINALPACKAGE=1
-          
-      - name: Upload Artifact
+
+      - name: 4. 导出成品文件
         uses: actions/upload-artifact@v4
         with:
           name: FakeLocation-Dylib
